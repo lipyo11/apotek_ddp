@@ -26,7 +26,7 @@ struct Transaksi {
     char metodeBayar[10]; 
     int uangBayar;
     int kembalian;
-    int sudahDiretur; // 0 = Belum, 1 = Sudah
+    int sudahDiretur; 
 };
 
 // --- DATABASE GLOBAL (Array Sederhana) ---
