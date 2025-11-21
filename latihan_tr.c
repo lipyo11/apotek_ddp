@@ -689,7 +689,6 @@ int main() {
         return 1; 
     }
     
-    // Jika login BERHASIL, lanjutkan ke menu utama program
     while (pilihan != 4) {
         clearScreen();
         printf("*****************************************\n");
