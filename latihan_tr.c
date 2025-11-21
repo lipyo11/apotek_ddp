@@ -17,7 +17,7 @@ struct ItemTransaksi {
     int hargaSatuan;
     int jumlah;
 };
-//baru
+
 struct Transaksi {
     int idTransaksi;
     struct ItemTransaksi items[20];
