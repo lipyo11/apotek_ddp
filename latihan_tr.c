@@ -1,8 +1,34 @@
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h> 
-#include <ctype.h>  
-#include <time.h>    
+#include <stdlib.h>
+#include <ctype.h>
+#include <time.h>
+#include <stdarg.h>
+
+// Jika menggunakan sistem non-Windows, sertakan unistd.h untuk usleep
+#ifndef _WIN32
+#include <unistd.h>
+// Untuk Windows, gunakan windows.h dan Sleep
+#else
+#include <windows.h>
+#endif
+
+// --- KODE WARNA ANSI ---
+#define RESET "\x1b[0m"
+#define MERAH_TEKS "\x1b[31m"
+#define HIJAU_TEKS "\x1b[32m"
+#define KUNING_TEKS "\x1b[33m"
+#define BIRU_TEKS "\x1b[34m"
+#define MAGENTA_TEKS "\x1b[35m"
+#define CYAN_TEKS "\x1b[36m"
+#define PUTIH_TEKS "\x1b[37m"
+
+#define MERAH_BG "\x1b[41m"
+#define PUTIH_BG "\x1b[47m"
+#define BIRU_BG "\x1b[44m"
+#define HITAM_TEKS "\x1b[30m"
+
+// --- STRUKTUR DATA ---
 
 struct Obat {
     int id;
@@ -23,10 +49,10 @@ struct Transaksi {
     struct ItemTransaksi items[20];
     int jumlahItems;
     int totalBelanja;
-    char metodeBayar[10]; 
+    char metodeBayar[10];
     int uangBayar;
     int kembalian;
-    int sudahDiretur; 
+    int sudahDiretur;
 };
 
 // --- DATABASE GLOBAL (Array Sederhana) ---
@@ -36,47 +62,101 @@ int jumlahObat = 0;
 struct Transaksi riwayatTransaksi[100];
 int jumlahTransaksi = 0;
 
-// --- FUNGSI UTILITAS (Bantuan) ---
+// --- FUNGSI UTILITAS (Bantuan & Perbaikan Input) ---
 
 void clearScreen() {
 #ifdef _WIN32
-    system("cls"); 
+    system("cls");
 #else
-    system("clear"); 
+    system("clear");
 #endif
 }
 
-// ✅ PERBAIKAN FUNGSI PAUSE: Hanya menunggu sekali tekan Enter
-void pause() {
-    printf("\nTekan Enter untuk melanjutkan...");
-    
-    // Membersihkan buffer input (pengamanan terakhir)
+// FUNGSI FLUSH INPUT PALING STABIL
+void flush_input() {
     int c;
-    while ((c = getchar()) != '\n' && c != EOF); 
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+// ⭐ FUNGSI UTAMA UNTUK RATA TENGAH HEADER
+void printCentered(const char *text) {
+    int terminal_width = 80; 
+    int text_length = strlen(text);
     
-    // Tunggu input Enter dari user
-    getchar(); 
+    // Perhitungan kasar untuk mengabaikan kode ANSI dalam panjang string
+    int real_length = 0;
+    for (int i = 0; i < text_length; i++) {
+        if (text[i] == '\x1b') {
+            while (i < text_length && text[i] != 'm') i++;
+        } else {
+            real_length++;
+        }
+    }
+
+    int padding = (terminal_width - real_length) / 2;
+
+    if (padding < 0) padding = 0;
+
+    for (int i = 0; i < padding; i++) {
+        printf(" ");
+    }
+    printf("%s\n", text);
+}
+
+// ⭐ FUNGSI BANTUAN UNTUK PADDING INPUT (Variadic Argument)
+void printLeftPadded(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    const int padding = 20; // Padding agar output terlihat terpusat
+
+    for (int i = 0; i < padding; i++) {
+        printf(" ");
+    }
+    vprintf(format, args);
+    va_end(args);
+}
+
+// FUNGSI PAUSE
+void pause() {
+    printf("\n");
+    printCentered(KUNING_TEKS "Tekan Enter untuk melanjutkan..." RESET);
+    flush_input(); 
+}
+
+void loading(const char *pesan) {
+    printLeftPadded(CYAN_TEKS "%s" RESET, pesan);
+    fflush(stdout);
+    for (int i = 0; i < 5; i++) {
+        printf(CYAN_TEKS "." RESET);
+        fflush(stdout);
+        #ifdef _WIN32
+            Sleep(200);
+        #else
+            usleep(200000);
+        #endif
+    }
+    printf("\n");
 }
 
 // Program Konfirmasi
 int konfirmasi(char *pesan) {
     char pilihan;
     while (1) {
-        printf("%s (y/n): ", pesan);
-        // HANYA ambil satu karakter, gunakan spasi sebelum %c untuk skip whitespace
-        if (scanf(" %c", &pilihan) != 1) {
-             while (getchar() != '\n'); // Clear buffer on error
-             continue; // Retry
+        printLeftPadded(MAGENTA_TEKS "%s" RESET " (y/n): ", pesan);
+        if (scanf(" %c", &pilihan) != 1) { 
+             flush_input(); 
+             continue;
         }
-        while (getchar() != '\n'); // Clear buffer
+        flush_input(); 
 
-        pilihan = tolower(pilihan); 
+        pilihan = tolower(pilihan);
         if (pilihan == 'y') {
             return 1;
         } else if (pilihan == 'n') {
             return 0;
         } else {
-            printf("Input tidak valid. Harap masukkan 'y' atau 'n'.\n");
+            printLeftPadded(MERAH_TEKS "Input tidak valid. Harap masukkan 'y' atau 'n'.\n" RESET);
         }
     }
 }
@@ -84,23 +164,22 @@ int konfirmasi(char *pesan) {
 int findObatById(int id) {
     for (int i = 0; i < jumlahObat; i++) {
         if (daftarObat[i].id == id) {
-            return i; 
+            return i;
         }
     }
-    return -1; 
+    return -1;
 }
 
 int findTransaksiById(int id) {
     for (int i = 0; i < jumlahTransaksi; i++) {
         if (riwayatTransaksi[i].idTransaksi == id) {
-            return i; 
+            return i;
         }
     }
-    return -1; 
+    return -1;
 }
 
 void initData() {
-    // Data awal untuk pengujian
     daftarObat[0] = (struct Obat){1, "Paracetamol", 5000, 100};
     daftarObat[1] = (struct Obat){2, "Bodrex", 2500, 100};
     daftarObat[2] = (struct Obat){3, "OBH Combi", 1500, 50};
@@ -108,99 +187,294 @@ void initData() {
     jumlahObat = 4;
 }
 
-// --- FUNGSI FITUR TAMBAHAN ---
 
-// Rumah Pola
+// --- UPDATE: RUMAH KOMPLEKS (Segitiga/Persegi + Trapesium/Persegi Panjang) ---
+// --- FUNGSI BANTUAN UNTUK DELAY (ANIMASI) ---
+// Taruh fungsi ini SEBELUM void rumahPola()
+void delay_ms(int ms) {
+    #ifdef _WIN32
+        Sleep(ms); // Windows pakai milidetik
+    #else
+        usleep(ms * 1000); // Linux/Mac pakai mikrodearik
+    #endif
+}
 void rumahPola() {
     clearScreen();
-    printf("=========================================\n");
-    printf("             RUMAH POLA\n");
-    printf("=========================================\n\n");
-    printf("      /\\       \n");
-    printf("     /  \\      \n");
-    printf("    /____\\     \n");
-    printf("   | ==== |    \n");
-    printf("   | |  | |    \n");
-    printf("   |______|    \n");
-    printf("\n\n");
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printCentered(CYAN_TEKS "   RUMAH SKETSA (SERBA PROPORSIONAL)" RESET);
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printf("\n");
+
+    int n = 0; 
+    char bahan = '#';
+
+    // --- INPUT SKALA (n) ---
+    // Angka ini akan menjadi tinggi untuk SEMUA bagian (Cerobong, Atap, Body)
+    printLeftPadded("Masukkan " HIJAU_TEKS "Skala Bangunan" RESET " (Min 4): ");
+    if (scanf("%d", &n) != 1) {
+        flush_input();
+        printLeftPadded(MERAH_TEKS "Input tidak valid. Default ke 6.\n" RESET);
+        n = 6;
+    }
+    flush_input();
+
+    if (n < 4) {
+        n = 4;
+        printLeftPadded(KUNING_TEKS "Skala diatur ke 4 agar proporsional.\n" RESET);
+    }
+
+    // --- INPUT BAHAN ---
+    printLeftPadded("Masukkan " HIJAU_TEKS "Karakter Bahan" RESET " (1 karakter): ");
+    if (scanf(" %c", &bahan) != 1) {
+        flush_input();
+        printLeftPadded(MERAH_TEKS "Input tidak valid. Default ke '#'.\n" RESET);
+        bahan = '#';
+    }
+    flush_input();
+
+    loading("Membangun Sesuai Ukuran...");
+    printf("\n");
+
+    // --- PERHITUNGAN DIMENSI ---
+    
+    // 1. Tinggi Komponen (SEMUA SAMA DENGAN n)
+    int t_cerobong = n; // <--- INI PERUBAHANNYA (Sesuai permintaan)
+    int t_atap     = n;
+    int t_body     = n;
+
+    // 2. Lebar Komponen
+    int l_alas_segitiga = (2 * n) - 1; 
+    int l_persegi       = l_alas_segitiga;    
+    int l_kanan         = n * 2; 
+
+    // Lebar cerobong tetap kita buat agak ramping (setengah n) 
+    // supaya terlihat seperti cerobong, bukan lantai tambahan.
+    int l_cerobong = (n < 6) ? 3 : n / 2; 
+
+    // 3. Posisi (Centering)
+    int total_width = l_persegi + l_kanan;
+    int offset_x = (80 - total_width) / 2;
+    if (offset_x < 0) offset_x = 0;
+    
+    // Posisi Horizontal Cerobong (Indentasi)
+    int indent_cerobong = offset_x + n + (l_kanan / 4);
+
+    int speed = 15; 
+    int row_delay = 50; 
+
+    // ==========================================
+    // --- FASE 0: CEROBONG ASAP ---
+    // ==========================================
+    // Mencetak cerobong setinggi 'n' baris
+    
+    printf(KUNING_TEKS); 
+    for (int i = 0; i < t_cerobong; i++) {
+        // Spasi margin kiri sampai posisi cerobong
+        for (int s = 0; s < indent_cerobong; s++) printf(" ");
+
+        // Cetak blok cerobong
+        for (int k = 0; k < l_cerobong; k++) {
+            printf("%c", bahan); 
+            fflush(stdout); delay_ms(speed);
+        }
+        printf("\n");
+        delay_ms(row_delay);
+    }
+    printf(RESET);
+
+    // ==========================================
+    // --- FASE 1: ATAP ---
+    // ==========================================
+    // Mencetak atap setinggi 'n' baris (looping i <= n)
+    
+    for (int i = 1; i <= n; i++) {
+        for (int s = 0; s < offset_x; s++) printf(" ");
+
+        // SEGITIGA (HIJAU)
+        for (int s = 0; s < n - i; s++) printf(" "); // Spasi pembentuk segitiga
+        printf(HIJAU_TEKS); 
+        for (int k = 0; k < (2 * i) - 1; k++) {
+            printf("%c", bahan); fflush(stdout); delay_ms(speed);
+        }
+
+        // ATAP DATAR (MERAH)
+        printf(MERAH_TEKS); 
+        for (int k = 0; k < l_kanan; k++) {
+            printf("%c", bahan); fflush(stdout); delay_ms(speed);
+        }
+        printf(RESET "\n"); delay_ms(row_delay);
+    }
+
+    // ==========================================
+    // --- FASE 2: BODY RUMAH ---
+    // ==========================================
+    // Mencetak body setinggi 'n' baris (looping i <= n)
+
+    for (int i = 1; i <= n; i++) {
+        for (int s = 0; s < offset_x; s++) printf(" ");
+
+        // PERSEGI KIRI (UNGU)
+        printf(MAGENTA_TEKS); 
+        for (int k = 0; k < l_persegi; k++) {
+            printf("%c", bahan); fflush(stdout); delay_ms(speed);
+        }
+
+        // PERSEGI PANJANG KANAN (BIRU)
+        printf(BIRU_TEKS); 
+        for (int k = 0; k < l_kanan; k++) {
+            printf("%c", bahan); fflush(stdout); delay_ms(speed);
+        }
+        printf(RESET "\n"); delay_ms(row_delay);
+    }
+
+    printf("\n");
+    printCentered(CYAN_TEKS "Rumah Selesai!" RESET);
+    printf("\n");
     pause();
 }
 
-// Bendera Negara (Indonesia - Menggunakan Kode Warna ANSI)
+
 void benderaNegara() {
     clearScreen();
-    printf("=========================================\n");
-    printf("      BENDERA REPUBLIK INDONESIA\n");
-    printf("=========================================\n\n");
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printCentered(CYAN_TEKS "      BENDERA REPUBLIK INDONESIA" RESET);
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printf("\n");
 
-    // Kode ANSI: \x1b[41m = Background Merah
-    printf("\x1b[41m"); 
-    printf("                                                     \n");
-    printf("                                                     \n");
-    printf("                                                     \n");
-    printf("                                                     \n");
-    printf("\x1b[0m");  // Reset warna
+    int tinggi = 0;
+    // Input Tinggi
+    printLeftPadded("Masukkan " HIJAU_TEKS "Tinggi" RESET " Bendera (Min 4, kelipatan 2): ");
+    if (scanf("%d", &tinggi) != 1 || tinggi < 4) {
+        flush_input();
+        printLeftPadded(MERAH_TEKS "Input Tinggi tidak valid. Default ke 4.\n" RESET);
+        tinggi = 4;
+    }
+    flush_input();
 
-    // Kode ANSI: \x1b[47m = Background Putih, \x1b[30m = Teks Hitam
-    printf("\x1b[47m\x1b[30m"); 
-    printf("                                                     \n");
-    printf("                                                     \n");
-    printf("                                                     \n");
-    printf("                                                     \n");
-    printf("\x1b[0m"); // Reset semua warna
+    // Validasi Kelipatan 2
+    if (tinggi % 2 != 0) {
+        tinggi++;
+        printLeftPadded(KUNING_TEKS "Tinggi diatur menjadi %d (Kelipatan 2 terdekat).\n" RESET, tinggi);
+    }
 
+    int lebar = tinggi * 2;
+    int tinggiSetengah = tinggi / 2;
+
+    loading("Menjahit Bendera Merah Putih");
+    printf("\n");
+
+    int total_width = lebar; 
+    int center_offset = (80 - total_width) / 2;
+    if (center_offset < 0) center_offset = 0;
+
+    // Kecepatan animasi (semakin kecil semakin cepat)
+    int speed = 10; 
+
+    // --- BAGIAN MERAH ---
+    for (int i = 0; i < tinggiSetengah; i++) {
+        // 1. Cetak Margin Kiri (Posisi Awal)
+        for (int j = 0; j < center_offset; j++) printf(" ");
+        
+        // 2. Set Warna Background Merah
+        printf(MERAH_BG);
+
+        // 3. Loop Cetak Per Karakter (Efek Mengetik)
+        for (int j = 0; j < lebar; j++) {
+            printf(" ");            // Cetak 1 blok merah
+            fflush(stdout);         // Paksa tampil di layar segera
+            delay_ms(speed);        // Jeda sebentar
+        }
+        
+        // 4. Reset Warna & Pindah Baris
+        printf(RESET "\n");
+    }
+
+    // --- BAGIAN PUTIH ---
+    for (int i = 0; i < tinggiSetengah; i++) {
+        // 1. Cetak Margin Kiri
+        for (int j = 0; j < center_offset; j++) printf(" ");
+
+        // 2. Set Warna Background Putih (Teks Hitam agar aman)
+        printf(PUTIH_BG HITAM_TEKS);
+
+        // 3. Loop Cetak Per Karakter (Efek Mengetik)
+        for (int j = 0; j < lebar; j++) {
+            printf(" ");            // Cetak 1 blok putih
+            fflush(stdout);         // Paksa tampil di layar segera
+            delay_ms(speed);        // Jeda sebentar
+        }
+        
+        // 4. Reset Warna & Pindah Baris
+        printf(RESET "\n");
+    }
+
+    printf("\n");
+    printCentered(CYAN_TEKS "MERDEKA!" RESET);
     printf("\n\n");
     pause();
 }
-
 // --- FUNGSI INTI APOTIK: CRUD OBAT ---
 
 void lihatListObat() {
     clearScreen();
-    printf("===================================================\n");
-    printf("            LIST SEMUA OBAT\n");
-    printf("===================================================\n");
+    printCentered(BIRU_TEKS "===================================================" RESET);
+    printCentered(CYAN_TEKS "             LIST SEMUA OBAT" RESET);
+    printCentered(BIRU_TEKS "===================================================" RESET);
+    
+    const int table_width = 41;
+    int padding = (80 - table_width) / 2;
+
     if (jumlahObat == 0) {
-        printf("Belum ada data obat.\n");
+        printCentered(KUNING_TEKS "Belum ada data obat." RESET);
     } else {
-        printf("ID   | Nama Obat           | Harga        | Stok\n");
-        printf("-----|---------------------|--------------|-----\n");
+        for (int i = 0; i < padding; i++) printf(" ");
+        printf(HIJAU_TEKS "ID | Nama Obat         | Harga      | Stok\n" RESET);
+        for (int i = 0; i < padding; i++) printf(" ");
+        printf(HIJAU_TEKS "---|-------------------|------------|-----\n" RESET);
+        
         for (int i = 0; i < jumlahObat; i++) {
-            printf("%-4d | %-19s | Rp %-9d | %d\n",
+            for (int j = 0; j < padding; j++) printf(" ");
+            printf("%-2d | %-17s | " MERAH_TEKS "Rp %-7d" RESET " | %d\n",
                    daftarObat[i].id,
                    daftarObat[i].nama,
                    daftarObat[i].harga,
                    daftarObat[i].stok);
         }
     }
-    printf("=====================================================\n");
+    printCentered(BIRU_TEKS "=====================================================" RESET);
 }
 
 void tambahObat() {
     clearScreen();
-    printf("--- Tambah Obat Baru ---\n");
-    
+    printCentered(MAGENTA_TEKS "--- Tambah Obat Baru ---" RESET);
+    printf("\n");
+
     struct Obat newObat;
     newObat.id = (jumlahObat == 0) ? 1 : daftarObat[jumlahObat - 1].id + 1;
 
-    printf("Nama Obat: ");
-    scanf(" %49[^\n]", newObat.nama); 
-    while (getchar() != '\n'); // Membersihkan buffer
+    printLeftPadded("Nama Obat: ");
+    if (fgets(newObat.nama, sizeof(newObat.nama), stdin) == NULL) {
+        printLeftPadded(MERAH_TEKS "Error membaca input nama.\n" RESET);
+        return;
+    }
+    newObat.nama[strcspn(newObat.nama, "\n")] = 0;
 
-    printf("Harga: Rp ");
+    printLeftPadded("Harga (Rp): ");
     if (scanf("%d", &newObat.harga) != 1) { newObat.harga = 0; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
-    printf("Stok Awal: ");
+    printLeftPadded("Stok Awal: ");
     if (scanf("%d", &newObat.stok) != 1) { newObat.stok = 0; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
+    printf("\n");
 
     if (konfirmasi("Simpan obat baru ini?")) {
+        loading("Menyimpan data");
         daftarObat[jumlahObat] = newObat;
         jumlahObat++;
-        printf("Sukses! Obat baru telah ditambahkan dengan ID %d.\n", newObat.id);
+        printLeftPadded(HIJAU_TEKS "Sukses! Obat baru telah ditambahkan dengan ID %d.\n" RESET, newObat.id);
     } else {
-        printf("Penambahan obat dibatalkan.\n");
+        printLeftPadded(KUNING_TEKS "Penambahan obat dibatalkan.\n" RESET);
     }
     pause();
 }
@@ -208,49 +482,53 @@ void tambahObat() {
 void editObat() {
     clearScreen();
     lihatListObat();
-    printf("--- Edit Obat ---\n");
+    printCentered(MAGENTA_TEKS "--- Edit Obat ---" RESET);
     if (jumlahObat == 0) { pause(); return; }
 
     int id;
-    printf("Masukkan ID obat yang ingin diedit: ");
+    printLeftPadded("Masukkan ID obat yang ingin diedit: ");
     if (scanf("%d", &id) != 1) { id = -1; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
     int index = findObatById(id);
     if (index == -1) {
-        printf("Error: Obat dengan ID %d tidak ditemukan.\n", id);
+        printLeftPadded(MERAH_TEKS "Error: Obat dengan ID %d tidak ditemukan.\n" RESET, id);
     } else {
-        printf("Anda mengedit: %s\n", daftarObat[index].nama);
-        printf("\nMasukkan data baru (masukkan 0 jika harga/stok tidak ingin diubah/diisi):\n");
+        printLeftPadded("Anda mengedit: " KUNING_TEKS "%s\n" RESET, daftarObat[index].nama);
+        printLeftPadded("\nMasukkan data baru (masukkan 0 jika harga/stok tidak ingin diubah/diisi, atau ENTER/0 untuk nama):\n");
 
-        char namaBaru[50] = "";
-        int hargaBaru = 0, stokBaru = 0;
+        char namaBaru[50];
+        namaBaru[0] = '\0';
+        int hargaBaru = -1, stokBaru = -1;
 
-        printf("Nama Baru (%s): ", daftarObat[index].nama);
-        scanf(" %49[^\n]", namaBaru); 
-        while (getchar() != '\n'); // Membersihkan buffer
+        printLeftPadded("Nama Baru (" CYAN_TEKS "%s" RESET "): ", daftarObat[index].nama);
+        if (fgets(namaBaru, sizeof(namaBaru), stdin) != NULL) {
+             namaBaru[strcspn(namaBaru, "\n")] = 0;
+        }
 
-        printf("Harga Baru (Rp %d): Rp ", daftarObat[index].harga);
-        if (scanf("%d", &hargaBaru) != 1) { hargaBaru = 0; }
-        while (getchar() != '\n'); // Membersihkan buffer
+        printLeftPadded("Harga Baru (" CYAN_TEKS "Rp %d" RESET "): Rp ", daftarObat[index].harga);
+        if (scanf("%d", &hargaBaru) != 1) { hargaBaru = -1; }
+        flush_input();
 
-        printf("Stok Baru (%d): ", daftarObat[index].stok);
-        if (scanf("%d", &stokBaru) != 1) { stokBaru = 0; }
-        while (getchar() != '\n'); // Membersihkan buffer
+        printLeftPadded("Stok Baru (" CYAN_TEKS "%d" RESET "): ", daftarObat[index].stok);
+        if (scanf("%d", &stokBaru) != 1) { stokBaru = -1; }
+        flush_input();
 
+        printf("\n");
         if (konfirmasi("Simpan perubahan?")) {
+            loading("Memperbarui data");
             if (strlen(namaBaru) > 0 && strcmp(namaBaru, "0") != 0) {
                 strcpy(daftarObat[index].nama, namaBaru);
             }
             if (hargaBaru > 0) {
                 daftarObat[index].harga = hargaBaru;
             }
-            if (stokBaru >= 0) { 
+            if (stokBaru >= 0) {
                 daftarObat[index].stok = stokBaru;
             }
-            printf("Sukses! Data obat telah diperbarui.\n");
+            printLeftPadded(HIJAU_TEKS "Sukses! Data obat telah diperbarui.\n" RESET);
         } else {
-            printf("Perubahan dibatalkan.\n");
+            printLeftPadded(KUNING_TEKS "Perubahan dibatalkan.\n" RESET);
         }
     }
     pause();
@@ -259,27 +537,28 @@ void editObat() {
 void hapusObat() {
     clearScreen();
     lihatListObat();
-    printf("--- Hapus Obat ---\n");
+    printCentered(MAGENTA_TEKS "--- Hapus Obat ---" RESET);
     if (jumlahObat == 0) { pause(); return; }
 
     int id;
-    printf("Masukkan ID obat yang ingin dihapus: ");
+    printLeftPadded("Masukkan ID obat yang ingin dihapus: ");
     if (scanf("%d", &id) != 1) { id = -1; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
     int index = findObatById(id);
     if (index == -1) {
-        printf("Error: Obat dengan ID %d tidak ditemukan.\n", id);
+        printLeftPadded(MERAH_TEKS "Error: Obat dengan ID %d tidak ditemukan.\n" RESET, id);
     } else {
-        printf("Anda akan menghapus: %s\n", daftarObat[index].nama);
+        printLeftPadded("Anda akan menghapus: " MERAH_TEKS "%s\n" RESET, daftarObat[index].nama);
         if (konfirmasi("Apakah Anda yakin ingin menghapus obat ini?")) {
+            loading("Menghapus data");
             for (int i = index; i < jumlahObat - 1; i++) {
                 daftarObat[i] = daftarObat[i + 1];
             }
             jumlahObat--;
-            printf("Sukses! Obat telah dihapus.\n");
+            printLeftPadded(HIJAU_TEKS "Sukses! Obat telah dihapus.\n" RESET);
         } else {
-            printf("Penghapusan dibatalkan.\n");
+            printLeftPadded(KUNING_TEKS "Penghapusan dibatalkan.\n" RESET);
         }
     }
     pause();
@@ -288,36 +567,51 @@ void hapusObat() {
 // --- FUNGSI INTI APOTIK: TRANSAKSI ---
 
 void cetakStruk(struct Transaksi trx) {
-    printf("\n\n--- STRUK PEMBELIAN (ID: %d) ---\n", trx.idTransaksi);
-    printf("--------------------------------------\n");
-    printf("Item              | Qty | Harga      | Subtotal\n");
+    const int line_width = 38;
+    int padding = (80 - line_width) / 2;
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(CYAN_TEKS "\n\n--- STRUK PEMBELIAN (ID: %d) -----\n" RESET, trx.idTransaksi);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("------------------------------------------------\n");
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(HIJAU_TEKS "Item              | Qty | Harga      | Subtotal\n" RESET);
+    for (int i = 0; i < padding; i++) printf(" ");
     printf("------------------|-----|------------|----------\n");
     for (int i = 0; i < trx.jumlahItems; i++) {
         struct ItemTransaksi item = trx.items[i];
-        printf("%-17s | %-3d | Rp %-7d | Rp %d\n",
+        for (int j = 0; j < padding; j++) printf(" ");
+        printf("%-17s | %-3d | " MAGENTA_TEKS "Rp %-7d" RESET " | " BIRU_TEKS "Rp %d" RESET "\n",
                item.namaObat,
                item.jumlah,
                item.hargaSatuan,
                (item.hargaSatuan * item.jumlah));
     }
-    printf("--------------------------------------\n");
-    printf("Total Belanja  : Rp %d\n", trx.totalBelanja);
-    printf("Metode Bayar   : %s\n", trx.metodeBayar);
-    printf("Uang Bayar     : Rp %d\n", trx.uangBayar);
-    printf("Kembalian      : Rp %d\n", trx.kembalian);
-    printf("Status Return  : %s\n", trx.sudahDiretur ? "SUDAH DIRETRU" : "BELUM DIRETRU");
-    printf("--------------------------------------\n");
-    printf("Terima kasih!\n");
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("-------------------------------------------------\n");
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(KUNING_TEKS "Total Belanja " RESET "  : " MERAH_TEKS "Rp %d\n" RESET, trx.totalBelanja);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("Metode Bayar     : %s\n", trx.metodeBayar);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("Uang Bayar       : Rp %d\n", trx.uangBayar);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("Kembalian        : " HIJAU_TEKS "Rp %d\n" RESET, trx.kembalian);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("Status Return    : %s\n", trx.sudahDiretur ? MERAH_TEKS "SUDAH DIRETRU" RESET : HIJAU_TEKS "BELUM DIRETRU" RESET);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf("-----------------------------------------------\n");
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(CYAN_TEKS "Terima kasih!\n" RESET);
 }
 
 void transaksiBaru() {
     clearScreen();
-    printf("=========================================\n");
-    printf("            TRANSAKSI BARU\n");
-    printf("=========================================\n");
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printCentered(CYAN_TEKS "             TRANSAKSI BARU" RESET);
+    printCentered(BIRU_TEKS "=========================================" RESET);
 
     if (jumlahObat == 0) {
-        printf("Belum ada obat. Transaksi tidak bisa dilakukan.\n");
+        printLeftPadded(MERAH_TEKS "Belum ada obat. Transaksi tidak bisa dilakukan.\n" RESET);
         pause();
         return;
     }
@@ -330,34 +624,34 @@ void transaksiBaru() {
 
     int idObat = 0;
     while (idObat != -1) {
-        clearScreen(); 
-        printf("--- Input Item ---\n");
+        clearScreen();
+        printCentered(MAGENTA_TEKS "--- Input Item ---" RESET);
         lihatListObat();
-        
-        printf("\nTotal saat ini: Rp %d\n", newTrx.totalBelanja);
-        printf("Masukkan ID Obat yang dibeli (atau -1 untuk selesai): ");
+
+        printLeftPadded(HIJAU_TEKS "\nTotal saat ini: Rp %d\n" RESET, newTrx.totalBelanja);
+        printLeftPadded("Masukkan ID Obat yang dibeli (atau -1 untuk selesai): ");
         if (scanf("%d", &idObat) != 1) { idObat = 0; }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
         if (idObat == -1) break;
-        if (idObat == 0) continue; 
+        if (idObat == 0) continue;
 
         int index = findObatById(idObat);
         if (index == -1) {
-            printf("Error: Obat tidak ditemukan!\n");
+            printLeftPadded(MERAH_TEKS "Error: Obat tidak ditemukan!\n" RESET);
             pause();
             continue;
         }
 
         int jumlahBeli = 0;
-        printf("Jumlah %s yang dibeli (Stok: %d): ", daftarObat[index].nama, daftarObat[index].stok);
+        printLeftPadded("Jumlah " KUNING_TEKS "%s" RESET " yang dibeli (Stok: %d): ", daftarObat[index].nama, daftarObat[index].stok);
         if (scanf("%d", &jumlahBeli) != 1) { jumlahBeli = 0; }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
         if (jumlahBeli > 0 && jumlahBeli <= daftarObat[index].stok) {
-            
+
             if (newTrx.jumlahItems >= 20) {
-                 printf("Error: Maksimum 20 jenis item per transaksi.\n");
+                 printLeftPadded(MERAH_TEKS "Error: Maksimum 20 jenis item per transaksi.\n" RESET);
                  pause();
                  continue;
             }
@@ -374,49 +668,51 @@ void transaksiBaru() {
 
             daftarObat[index].stok -= jumlahBeli;
 
-            printf("Berhasil menambahkan %s (Qty: %d).\n", newItem.namaObat, newItem.jumlah);
+            printLeftPadded(HIJAU_TEKS "Berhasil menambahkan %s (Qty: %d).\n" RESET, newItem.namaObat, newItem.jumlah);
             pause();
         } else {
-            printf("Error: Jumlah beli tidak valid atau Stok (%d) tidak mencukupi!\n", daftarObat[index].stok);
+            printLeftPadded(MERAH_TEKS "Error: Jumlah beli tidak valid atau Stok (%d) tidak mencukupi!\n" RESET, daftarObat[index].stok);
             pause();
         }
     }
 
     if (newTrx.jumlahItems == 0) {
-        printf("Transaksi dibatalkan karena tidak ada item.\n");
+        printLeftPadded(KUNING_TEKS "Transaksi dibatalkan karena tidak ada item.\n" RESET);
         pause();
         return;
     }
 
     // --- PEMBAYARAN ---
     clearScreen();
-    printf("--- PROSES PEMBAYARAN ---\n");
-    printf("Total Belanja Anda: Rp %d\n", newTrx.totalBelanja);
-    printf("Pilih Metode Pembayaran (1. CASH / 2. QRIS): ");
+    printCentered(MAGENTA_TEKS "--- PROSES PEMBAYARAN ---" RESET);
+    printLeftPadded("Total Belanja Anda: " MERAH_TEKS "Rp %d\n" RESET, newTrx.totalBelanja);
+    printLeftPadded("Pilih Metode Pembayaran (1. CASH / 2. QRIS): ");
 
     int metode;
     if (scanf("%d", &metode) != 1) { metode = 0; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
-    if (metode == 2) { 
+    loading("Memproses pembayaran");
+
+    if (metode == 2) {
         strcpy(newTrx.metodeBayar, "QRIS");
         newTrx.uangBayar = newTrx.totalBelanja;
         newTrx.kembalian = 0;
-        printf("Pembayaran QRIS berhasil. Total Rp %d. Tidak ada kembalian.\n", newTrx.totalBelanja);
-    } else { 
+        printLeftPadded(HIJAU_TEKS "Pembayaran QRIS berhasil. Total Rp %d. Tidak ada kembalian.\n" RESET, newTrx.totalBelanja);
+    } else {
         strcpy(newTrx.metodeBayar, "CASH");
         int uangBayar = 0;
         while (uangBayar < newTrx.totalBelanja) {
-            printf("Masukkan Uang Tunai (CASH): Rp ");
-            if (scanf("%d", &uangBayar) != 1) { uangBayar = 0; } 
-            while (getchar() != '\n'); // Membersihkan buffer
+            printLeftPadded("Masukkan Uang Tunai (CASH): Rp ");
+            if (scanf("%d", &uangBayar) != 1) { uangBayar = 0; }
+            flush_input(); 
             if (uangBayar < newTrx.totalBelanja) {
-                printf("Uang tidak cukup!\n");
+                printLeftPadded(MERAH_TEKS "Uang tidak cukup!\n" RESET);
             }
         }
         newTrx.uangBayar = uangBayar;
         newTrx.kembalian = uangBayar - newTrx.totalBelanja;
-        printf("Kembalian: Rp %d\n", newTrx.kembalian);
+        printLeftPadded("Kembalian: " HIJAU_TEKS "Rp %d\n" RESET, newTrx.kembalian);
     }
 
     riwayatTransaksi[jumlahTransaksi] = newTrx;
@@ -427,37 +723,45 @@ void transaksiBaru() {
 
 void lihatRiwayatTransaksi() {
     clearScreen();
-    printf("=========================================\n");
-    printf("          RIWAYAT TRANSAKSI\n");
-    printf("=========================================\n");
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printCentered(CYAN_TEKS "          RIWAYAT TRANSAKSI" RESET);
+    printCentered(BIRU_TEKS "=========================================" RESET);
+
     if (jumlahTransaksi == 0) {
-        printf("Belum ada riwayat transaksi.\n");
+        printCentered(KUNING_TEKS "Belum ada riwayat transaksi." RESET);
         pause();
         return;
-    } 
-    
-    printf("ID   | Total Belanja | Metode Bayar | Status Return\n");
-    printf("-----|---------------|--------------|---------------\n");
+    }
+
+    const int table_width = 42;
+    int padding = (80 - table_width) / 2;
+
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(HIJAU_TEKS "ID | Total Belanja | Metode Bayar | Status Return\n" RESET);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(HIJAU_TEKS "---|---------------|--------------|---------------\n" RESET);
     for (int i = 0; i < jumlahTransaksi; i++) {
-        printf("%-4d | Rp %-10d | %-12s | %s\n",
+        for (int j = 0; j < padding; j++) printf(" ");
+        printf("%-2d | " MERAH_TEKS "Rp %-10d" RESET " | %-12s | %s\n",
                  riwayatTransaksi[i].idTransaksi,
                  riwayatTransaksi[i].totalBelanja,
                  riwayatTransaksi[i].metodeBayar,
-                 riwayatTransaksi[i].sudahDiretur ? "SUDAH" : "BELUM");
+                 riwayatTransaksi[i].sudahDiretur ? MERAH_TEKS "SUDAH" RESET : HIJAU_TEKS "BELUM" RESET);
     }
-    printf("=========================================\n");
-    
-    printf("Masukkan ID Transaksi untuk lihat detail (0=kembali): ");
+    printCentered(BIRU_TEKS "=========================================" RESET);
+
+    printLeftPadded("Masukkan ID Transaksi untuk lihat detail (0=kembali): ");
     int id;
     if (scanf("%d", &id) != 1) { id = 0; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
     if (id != 0) {
         int index = findTransaksiById(id);
         if (index != -1) {
+            loading("Mengambil detail transaksi");
             cetakStruk(riwayatTransaksi[index]);
         } else {
-            printf("ID Transaksi tidak ditemukan.\n");
+            printLeftPadded(MERAH_TEKS "ID Transaksi tidak ditemukan.\n" RESET);
         }
     }
     pause();
@@ -468,48 +772,55 @@ void lihatRiwayatTransaksi() {
 
 void returnProduk() {
     clearScreen();
-    printf("=========================================\n");
-    printf("            RETURN PRODUK\n");
-    printf("=========================================\n");
+    printCentered(BIRU_TEKS "=========================================" RESET);
+    printCentered(CYAN_TEKS "            RETURN PRODUK" RESET);
+    printCentered(BIRU_TEKS "=========================================" RESET);
 
     if (jumlahTransaksi == 0) {
-        printf("Belum ada transaksi untuk diretur.\n");
+        printLeftPadded(KUNING_TEKS "Belum ada transaksi untuk diretur.\n" RESET);
         pause();
         return;
     }
 
-    printf("Masukkan ID Transaksi yang ingin diretur: ");
+    printLeftPadded("Masukkan ID Transaksi yang ingin diretur: ");
     int idTrx;
     if (scanf("%d", &idTrx) != 1) { idTrx = -1; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
     int indexTrx = findTransaksiById(idTrx);
 
     if (indexTrx == -1) {
-        printf("Error: ID Transaksi %d tidak ditemukan.\n", idTrx);
+        printLeftPadded(MERAH_TEKS "Error: ID Transaksi %d tidak ditemukan.\n" RESET, idTrx);
         pause();
         return;
     }
 
     if (riwayatTransaksi[indexTrx].sudahDiretur) {
-        printf("Error: Transaksi ini sudah pernah diproses retur.\n");
+        printLeftPadded(MERAH_TEKS "Error: Transaksi ini sudah pernah diproses retur.\n" RESET);
         pause();
         return;
     }
 
-    printf("Item pada Transaksi ID %d:\n", idTrx);
-    printf("ID   | Nama Obat           | Qty Dibeli\n");
-    printf("-----|---------------------|-----------\n");
+    printLeftPadded("Item pada Transaksi ID " KUNING_TEKS "%d" RESET ":\n", idTrx);
+    
+    const int table_width = 35;
+    int padding = (80 - table_width) / 2;
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(HIJAU_TEKS "ID | Nama Obat         | Qty Dibeli\n" RESET);
+    for (int i = 0; i < padding; i++) printf(" ");
+    printf(HIJAU_TEKS "---|-------------------|-----------\n" RESET);
     for (int i = 0; i < riwayatTransaksi[indexTrx].jumlahItems; i++) {
         struct ItemTransaksi item = riwayatTransaksi[indexTrx].items[i];
-        printf("%-4d | %-19s | %d\n", item.idObat, item.namaObat, item.jumlah);
+        for (int j = 0; j < padding; j++) printf(" ");
+        printf("%-2d | %-17s | %d\n", item.idObat, item.namaObat, item.jumlah);
     }
+    for (int i = 0; i < padding; i++) printf(" ");
     printf("--------------------------------------\n");
 
-    printf("Masukkan ID Obat yang ingin diretur (dari list di atas): ");
+    printLeftPadded("Masukkan ID Obat yang ingin diretur (dari list di atas): ");
     int idObatRetur;
     if (scanf("%d", &idObatRetur) != 1) { idObatRetur = -1; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
     int indexItemTrx = -1;
     for (int i = 0; i < riwayatTransaksi[indexTrx].jumlahItems; i++) {
@@ -520,19 +831,19 @@ void returnProduk() {
     }
 
     if (indexItemTrx == -1) {
-        printf("Error: Obat dengan ID %d tidak dibeli pada transaksi ini.\n", idObatRetur);
+        printLeftPadded(MERAH_TEKS "Error: Obat dengan ID %d tidak dibeli pada transaksi ini.\n" RESET, idObatRetur);
         pause();
         return;
     }
 
     int jumlahRetur;
     int qtyDibeli = riwayatTransaksi[indexTrx].items[indexItemTrx].jumlah;
-    printf("Jumlah %s yang ingin diretur (Maks: %d): ", riwayatTransaksi[indexTrx].items[indexItemTrx].namaObat, qtyDibeli);
+    printLeftPadded("Jumlah " KUNING_TEKS "%s" RESET " yang ingin diretur (Maks: %d): ", riwayatTransaksi[indexTrx].items[indexItemTrx].namaObat, qtyDibeli);
     if (scanf("%d", &jumlahRetur) != 1) { jumlahRetur = 0; }
-    while (getchar() != '\n'); // Membersihkan buffer
+    flush_input(); 
 
     if (jumlahRetur <= 0 || jumlahRetur > qtyDibeli) {
-        printf("Error: Jumlah retur tidak valid.\n");
+        printLeftPadded(MERAH_TEKS "Error: Jumlah retur tidak valid.\n" RESET);
         pause();
         return;
     }
@@ -540,31 +851,31 @@ void returnProduk() {
     int hargaSatuan = riwayatTransaksi[indexTrx].items[indexItemTrx].hargaSatuan;
     int totalRefund = hargaSatuan * jumlahRetur;
 
-    printf("\nTotal refund untuk %d x %s adalah Rp %d\n", jumlahRetur, riwayatTransaksi[indexTrx].items[indexItemTrx].namaObat, totalRefund);
+    printLeftPadded("\nTotal refund untuk %d x %s adalah " MERAH_TEKS "Rp %d\n" RESET, jumlahRetur, riwayatTransaksi[indexTrx].items[indexItemTrx].namaObat, totalRefund);
 
     if (konfirmasi("Proses retur dan kembalikan uang customer?")) {
+        loading("Memproses retur");
         int indexObatMaster = findObatById(idObatRetur);
         if (indexObatMaster != -1) {
             daftarObat[indexObatMaster].stok += jumlahRetur;
-        } 
+        }
 
         riwayatTransaksi[indexTrx].sudahDiretur = 1;
 
-        printf("✅ Sukses! Retur diproses.\n");
-        printf("Stok %s dikembalikan. Harap berikan refund Rp %d ke customer.\n",
+        printLeftPadded(HIJAU_TEKS "✅ Sukses! Retur diproses.\n" RESET);
+        printLeftPadded("Stok " KUNING_TEKS "%s" RESET " dikembalikan. Harap berikan refund " MERAH_TEKS "Rp %d" RESET " ke customer.\n",
                daftarObat[indexObatMaster].nama, totalRefund);
     } else {
-        printf("Retur dibatalkan.\n");
+        printLeftPadded(KUNING_TEKS "Retur dibatalkan.\n" RESET);
     }
     pause();
 }
 
 // --- FUNGSI MENU & LOGIN ---
 
-// Fungsi login() dengan kesempatan mengulang (Maks 3x)
 int login() {
     const char hardcodeUser[] = "admin";
-    const char hardcodePass[] = "123"; 
+    const char hardcodePass[] = "123";
     char inputUser[50];
     char inputPass[50];
     int attempts = 0;
@@ -572,71 +883,76 @@ int login() {
 
     while (attempts < max_attempts) {
         clearScreen();
-        printf("=========================================\n");
-        printf("            LOGIN SISTEM APOTIK\n");
-        printf("=========================================\n");
-        printf("Percobaan ke-%d dari %d\n", attempts + 1, max_attempts);
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printCentered(CYAN_TEKS "          LOGIN SISTEM APOTIK" RESET);
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        
+        printLeftPadded("Percobaan ke-" KUNING_TEKS "%d" RESET " dari %d\n", attempts + 1, max_attempts);
 
-        printf("Username: ");
+        printLeftPadded("Username: ");
+        // Perbaikan: Batasi input 49 karakter untuk mencegah buffer overflow
         if (scanf("%49s", inputUser) != 1) {
-            while (getchar() != '\n'); 
+            flush_input();
             attempts++;
             continue;
         }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
-        printf("Password: ");
+        printLeftPadded("Password: ");
+        // Perbaikan: Batasi input 49 karakter untuk mencegah buffer overflow
         if (scanf("%49s", inputPass) != 1) {
-            while (getchar() != '\n');
+            flush_input();
             attempts++;
             continue;
         }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
         if (strcmp(inputUser, hardcodeUser) == 0 && strcmp(inputPass, hardcodePass) == 0) {
-            printf("Login Berhasil! Selamat datang.\n");
+            loading("Memeriksa kredensial");
+            printLeftPadded(HIJAU_TEKS "Login Berhasil! Selamat datang.\n" RESET);
             pause();
             return 1;
         } else {
             attempts++;
-            printf("❌ Username atau Password salah! ");
+            printLeftPadded(MERAH_TEKS "❌ Username atau Password salah! " RESET);
             if (attempts < max_attempts) {
-                printf("Anda memiliki %d percobaan tersisa.\n", max_attempts - attempts);
-                pause(); 
+                printLeftPadded("Anda memiliki %d percobaan tersisa.\n", max_attempts - attempts);
+                pause();
             } else {
-                printf("Semua percobaan gagal. Program akan keluar.\n");
+                printLeftPadded("Semua percobaan gagal. Program akan keluar.\n");
             }
         }
     }
     return 0; // Login gagal
 }
 
-
 void menuManajemenObat() {
     int pilihan = 0;
     while (pilihan != 5) {
         clearScreen();
-        printf("=========================================\n");
-        printf("            MANAJEMEN OBAT (CRUD)\n");
-        printf("=========================================\n");
-        printf("1. Lihat Semua Obat (Read)\n");
-        printf("2. Tambah Obat Baru (Create)\n");
-        printf("3. Edit Obat (Update)\n");
-        printf("4. Hapus Obat (Delete)\n");
-        printf("5. Kembali\n");
-        printf("=========================================\n");
-        printf("Pilihan Anda: ");
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printCentered(CYAN_TEKS "          MANAJEMEN OBAT (CRUD)" RESET);
+        printCentered(BIRU_TEKS "=========================================" RESET);
         
+        printLeftPadded("1. Lihat Semua Obat " HIJAU_TEKS "(Read)\n" RESET);
+        printLeftPadded("2. Tambah Obat Baru " HIJAU_TEKS "(Create)\n" RESET);
+        printLeftPadded("3. Edit Obat " HIJAU_TEKS "(Update)\n" RESET);
+        printLeftPadded("4. Hapus Obat " HIJAU_TEKS "(Delete)\n" RESET);
+        printLeftPadded("5. " KUNING_TEKS "Kembali\n" RESET);
+        
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printLeftPadded("Pilihan Anda: ");
+
         if (scanf("%d", &pilihan) != 1) { pilihan = 0; }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
         switch (pilihan) {
-            case 1: lihatListObat(); pause(); break;
-            case 2: tambahObat(); break;
+            case 1: loading("Mengambil data obat"); lihatListObat(); pause(); break;
+            case 2: tambahObat(); break; 
             case 3: editObat(); break;
             case 4: hapusObat(); break;
-            case 5: printf("Kembali ke Menu Apotik...\n"); break;
-            default: printf("Pilihan tidak valid!\n"); pause(); break;
+            case 5: printLeftPadded(KUNING_TEKS "Kembali ke Menu Apotik...\n" RESET); pause(); break;
+            default: printLeftPadded(MERAH_TEKS "Pilihan tidak valid!\n" RESET); pause(); break;
         }
     }
 }
@@ -646,85 +962,84 @@ void menuApotik() {
     int pilihan = 0;
     while (pilihan != 5) {
         clearScreen();
-        printf("=========================================\n");
-        printf("          SISTEM APOTIK SEDERHANA\n");
-        printf("=========================================\n");
-        printf("1. Manajemen Obat\n");
-        printf("2. Transaksi Baru\n");
-        printf("3. Riwayat Transaksi\n");
-        printf("4. Return Produk\n");
-        printf("5. Logout (Kembali ke Menu Utama)\n");
-        printf("=========================================\n");
-        printf("Pilihan Anda: ");
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printCentered(CYAN_TEKS "      SISTEM APOTIK SEDERHANA" RESET);
+        printCentered(BIRU_TEKS "=========================================" RESET);
         
+        printLeftPadded("1. Manajemen Obat\n");
+        printLeftPadded("2. Transaksi Baru\n");
+        printLeftPadded("3. Riwayat Transaksi\n");
+        printLeftPadded("4. Return Produk\n");
+        printLeftPadded("5. " KUNING_TEKS "Logout (Kembali ke Menu Utama)\n" RESET);
+        
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printLeftPadded("Pilihan Anda: ");
+
         if (scanf("%d", &pilihan) != 1) { pilihan = 0; }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
         switch (pilihan) {
-            case 1: menuManajemenObat(); break;
-            case 2: transaksiBaru(); break;
+            case 1: loading("Masuk menu manajemen"); menuManajemenObat(); break;
+            case 2: loading("Memulai transaksi baru"); transaksiBaru(); break;
             case 3: lihatRiwayatTransaksi(); break;
-            case 4: returnProduk(); break;
-            case 5: printf("Anda telah logout.\n"); pause(); break;
-            default: printf("Pilihan tidak valid!\n"); pause(); break;
+            case 4: loading("Masuk menu retur produk"); returnProduk(); break;
+            case 5: printLeftPadded(KUNING_TEKS "Anda telah logout.\n" RESET); pause(); break;
+            default: printLeftPadded(MERAH_TEKS "Pilihan tidak valid!\n" RESET); pause(); break;
         }
     }
 }
 
 // FUNGSI UTAMA (MAIN)
 int main() {
-    initData(); 
+    initData();
     int pilihan = 0;
 
-    // JALANKAN LOGIN TERLEBIH DAHULU
-    clearScreen();
-    printf("*****************************************\n");
-    printf("* SELAMAT DATANG DI PROGRAM UTAMA       *\n");
-    printf("*****************************************\n");
-    printf("anda perlu login untuk masuk ke sistem apotik.\n");
-    pause(); 
-
-    // Panggil fungsi login(). Jika gagal (return 0), program langsung berhenti.
-    if (!login()) { 
-        return 1; 
+    if (!login()) {
+        return 1;
     }
-    
+
+    // --- MENU UTAMA SETELAH LOGIN SUKSES ---
     while (pilihan != 4) {
         clearScreen();
-        printf("*****************************************\n");
-        printf("* MENU PROGRAM UTAMA                    *\n");
-        printf("*****************************************\n");
-        printf("1. Sistem Apotik\n"); 
-        printf("2. Rumah Pola\n");
-        printf("3. Bendera Negara\n");
-        printf("4. Exit\n");
-        printf("*****************************************\n");
-        printf("Pilihan Anda: ");
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printCentered(CYAN_TEKS "          MENU PROGRAM UTAMA" RESET);
+        printCentered(BIRU_TEKS "=========================================" RESET);
+
+        printLeftPadded("1. Sistem Apotik\n");
+        printLeftPadded("2. Rumah Pola\n");
+        printLeftPadded("3. Bendera Negara\n");
+        printLeftPadded("4. " MERAH_TEKS "Exit\n" RESET);
+
+        printCentered(BIRU_TEKS "=========================================" RESET);
+        printLeftPadded("Pilihan Anda: ");
 
         if (scanf("%d", &pilihan) != 1) {
-            pilihan = 0; 
+            pilihan = 0;
         }
-        while (getchar() != '\n'); // Membersihkan buffer
+        flush_input(); 
 
         switch (pilihan) {
             case 1:
-                menuApotik(); 
+                loading("Masuk ke Sistem Apotik");
+                menuApotik();
                 break;
             case 2:
-                rumahPola(); 
+                loading("Masuk ke Rumah Pola");
+                rumahPola();
                 break;
             case 3:
-                benderaNegara(); 
+                loading("Masuk ke Bendera Negara");
+                benderaNegara();
                 break;
             case 4:
                 if (konfirmasi("Apakah Anda yakin ingin keluar dari program?")) {
-                    printf("Program diakhiri.\n");
+                    printLeftPadded(MERAH_TEKS "Program diakhiri.\n" RESET);
                 } else {
                     pilihan = 0;
                 }
                 break;
             default:
-                printf("Pilihan tidak valid.\n");
+                printLeftPadded(MERAH_TEKS "Pilihan tidak valid.\n" RESET);
                 pause();
                 break;
         }
