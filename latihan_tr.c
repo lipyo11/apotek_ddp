@@ -5,6 +5,8 @@
 #include <time.h>
 #include <stdarg.h>
 
+//(ini nanti muhapus, regim)//
+
 // Jika menggunakan sistem non-Windows, sertakan unistd.h untuk usleep
 #ifndef _WIN32
 #include <unistd.h>
