@@ -5,8 +5,6 @@
 #include <time.h>
 #include <stdarg.h>
 
-//(ini nanti muhapus, regim)//
-
 // Jika menggunakan sistem non-Windows, sertakan unistd.h untuk usleep
 #ifndef _WIN32
 #include <unistd.h>
@@ -203,7 +201,7 @@ void delay_ms(int ms) {
 void rumahPola() {
     clearScreen();
     printCentered(BIRU_TEKS "=========================================" RESET);
-    printCentered(CYAN_TEKS "RUMAH SKETSA (SERBA PROPORSIONAL)" RESET);
+    printCentered(CYAN_TEKS "   RUMAH SKETSA (SERBA PROPORSIONAL)" RESET);
     printCentered(BIRU_TEKS "=========================================" RESET);
     printf("\n");
 
@@ -212,7 +210,7 @@ void rumahPola() {
 
     // --- INPUT SKALA (n) ---
     // Angka ini akan menjadi tinggi untuk SEMUA bagian (Cerobong, Atap, Body)
-    printLeftPadded("Masukkan " HIJAU_TEKS "Tinggi Bangunan" RESET " (Min 4): ");
+    printLeftPadded("Masukkan " HIJAU_TEKS "Skala Bangunan" RESET " (Min 4): ");
     if (scanf("%d", &n) != 1) {
         flush_input();
         printLeftPadded(MERAH_TEKS "Input tidak valid. Default ke 6.\n" RESET);
@@ -240,14 +238,14 @@ void rumahPola() {
     // --- PERHITUNGAN DIMENSI ---
     
     // 1. Tinggi Komponen (SEMUA SAMA DENGAN n)
-    int t_cerobong = (n/2)+1; 
+    int t_cerobong = n; // <--- INI PERUBAHANNYA (Sesuai permintaan)
     int t_atap     = n;
     int t_body     = n;
 
     // 2. Lebar Komponen
     int l_alas_segitiga = (2 * n) - 1; 
     int l_persegi       = l_alas_segitiga;    
-    int l_kanan         = n * 3; 
+    int l_kanan         = n * 2; 
 
     // Lebar cerobong tetap kita buat agak ramping (setengah n) 
     // supaya terlihat seperti cerobong, bukan lantai tambahan.
@@ -339,7 +337,7 @@ void rumahPola() {
 void benderaNegara() {
     clearScreen();
     printCentered(BIRU_TEKS "=========================================" RESET);
-    printCentered(CYAN_TEKS "BENDERA REPUBLIK INDONESIA" RESET);
+    printCentered(CYAN_TEKS "      BENDERA REPUBLIK INDONESIA" RESET);
     printCentered(BIRU_TEKS "=========================================" RESET);
     printf("\n");
 
@@ -442,7 +440,7 @@ void benderaNegara() {
 void lihatListObat() {
     clearScreen();
     printCentered(BIRU_TEKS "===================================================" RESET);
-    printCentered(CYAN_TEKS "LIST SEMUA OBAT" RESET);
+    printCentered(CYAN_TEKS "             LIST SEMUA OBAT" RESET);
     printCentered(BIRU_TEKS "===================================================" RESET);
     
     const int table_width = 41;
@@ -631,7 +629,7 @@ void cetakStruk(struct Transaksi trx) {
 void transaksiBaru() {
     clearScreen();
     printCentered(BIRU_TEKS "=========================================" RESET);
-    printCentered(CYAN_TEKS "TRANSAKSI BARU" RESET);
+    printCentered(CYAN_TEKS "             TRANSAKSI BARU" RESET);
     printCentered(BIRU_TEKS "=========================================" RESET);
 
     if (jumlahObat == 0) {
@@ -748,7 +746,7 @@ void transaksiBaru() {
 void lihatRiwayatTransaksi() {
     clearScreen();
     printCentered(BIRU_TEKS "=========================================" RESET);
-    printCentered(CYAN_TEKS "RIWAYAT TRANSAKSI" RESET);
+    printCentered(CYAN_TEKS "          RIWAYAT TRANSAKSI" RESET);
     printCentered(BIRU_TEKS "=========================================" RESET);
 
     if (jumlahTransaksi == 0) {
@@ -797,7 +795,7 @@ void lihatRiwayatTransaksi() {
 void returnProduk() {
     clearScreen();
     printCentered(BIRU_TEKS "=========================================" RESET);
-    printCentered(CYAN_TEKS "RETURN PRODUK" RESET);
+    printCentered(CYAN_TEKS "            RETURN PRODUK" RESET);
     printCentered(BIRU_TEKS "=========================================" RESET);
 
     if (jumlahTransaksi == 0) {
@@ -908,7 +906,7 @@ int login() {
     while (attempts < max_attempts) {
         clearScreen();
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printCentered(CYAN_TEKS "LOGIN SISTEM APOTIK" RESET);
+        printCentered(CYAN_TEKS "          LOGIN SISTEM APOTIK" RESET);
         printCentered(BIRU_TEKS "=========================================" RESET);
         
         printLeftPadded("Percobaan ke-" KUNING_TEKS "%d" RESET " dari %d\n", attempts + 1, max_attempts);
@@ -955,7 +953,7 @@ void menuManajemenObat() {
     while (pilihan != 5) {
         clearScreen();
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printCentered(CYAN_TEKS "MANAJEMEN OBAT (CRUD)" RESET);
+        printCentered(CYAN_TEKS "          MANAJEMEN OBAT (CRUD)" RESET);
         printCentered(BIRU_TEKS "=========================================" RESET);
         
         printLeftPadded("1. Lihat Semua Obat " HIJAU_TEKS "(Read)\n" RESET);
@@ -987,7 +985,7 @@ void menuApotik() {
     while (pilihan != 5) {
         clearScreen();
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printCentered(CYAN_TEKS "SISTEM APOTIK SEDERHANA" RESET);
+        printCentered(CYAN_TEKS "      SISTEM APOTIK SEDERHANA" RESET);
         printCentered(BIRU_TEKS "=========================================" RESET);
         
         printLeftPadded("1. Manajemen Obat\n");
@@ -1026,7 +1024,7 @@ int main() {
     while (pilihan != 4) {
         clearScreen();
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printCentered(CYAN_TEKS "MENU PROGRAM UTAMA" RESET);
+        printCentered(CYAN_TEKS "          MENU PROGRAM UTAMA" RESET);
         printCentered(BIRU_TEKS "=========================================" RESET);
 
         printLeftPadded("1. Sistem Apotik\n");
