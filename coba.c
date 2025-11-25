@@ -28,7 +28,7 @@
 #define BIRU_BG "\x1b[44m"
 #define HITAM_TEKS "\x1b[30m"
 
-// --- STRUKTUR DATA ---//
+// --- STRUKTUR DATA ---
 
 struct Obat {
     int id;
@@ -357,13 +357,15 @@ void benderaNegara() {
         printLeftPadded(KUNING_TEKS "Tinggi diatur menjadi %d (Kelipatan 2 terdekat).\n" RESET, tinggi);
     }
 
-    int lebar = tinggi * 2;
+    int lebar = tinggi * 3;
     int tinggiSetengah = tinggi / 2;
 
     loading("Menjahit Bendera Merah Putih");
     printf("\n");
 
-    int total_width = lebar; 
+    // Hitung offset agar Tiang + Bendera berada di tengah
+    // Lebar total = 1 (Tiang) + Lebar Bendera
+    int total_width = lebar + 1; 
     int center_offset = (80 - total_width) / 2;
     if (center_offset < 0) center_offset = 0;
 
@@ -372,20 +374,23 @@ void benderaNegara() {
 
     // --- BAGIAN MERAH ---
     for (int i = 0; i < tinggiSetengah; i++) {
-        // 1. Cetak Margin Kiri (Posisi Awal)
+        // 1. Cetak Margin Kiri
         for (int j = 0; j < center_offset; j++) printf(" ");
         
-        // 2. Set Warna Background Merah
+        // 2. Cetak TIANG sebelum bendera
+        printf(RESET "||" RESET); 
+
+        // 3. Set Warna Background Merah
         printf(MERAH_BG);
 
-        // 3. Loop Cetak Per Karakter (Efek Mengetik)
+        // 4. Loop Cetak Per Karakter (Efek Mengetik)
         for (int j = 0; j < lebar; j++) {
             printf(" ");            // Cetak 1 blok merah
             fflush(stdout);         // Paksa tampil di layar segera
             delay_ms(speed);        // Jeda sebentar
         }
         
-        // 4. Reset Warna & Pindah Baris
+        // 5. Reset Warna & Pindah Baris
         printf(RESET "\n");
     }
 
@@ -394,19 +399,36 @@ void benderaNegara() {
         // 1. Cetak Margin Kiri
         for (int j = 0; j < center_offset; j++) printf(" ");
 
-        // 2. Set Warna Background Putih (Teks Hitam agar aman)
+        // 2. Cetak TIANG sebelum bendera
+        printf(RESET "||" RESET); 
+
+        // 3. Set Warna Background Putih (Teks Hitam agar aman)
         printf(PUTIH_BG HITAM_TEKS);
 
-        // 3. Loop Cetak Per Karakter (Efek Mengetik)
+        // 4. Loop Cetak Per Karakter (Efek Mengetik)
         for (int j = 0; j < lebar; j++) {
             printf(" ");            // Cetak 1 blok putih
             fflush(stdout);         // Paksa tampil di layar segera
             delay_ms(speed);        // Jeda sebentar
         }
         
-        // 4. Reset Warna & Pindah Baris
+        // 5. Reset Warna & Pindah Baris
         printf(RESET "\n");
     }
+
+    // --- BAGIAN TIANG (BAWAH/KAKI) ---
+    // Tiang diperpanjang ke bawah sedikit agar terlihat proporsional
+    int tinggiTiangBawah = tinggi; 
+    
+    for(int i = 0; i < tinggiTiangBawah; i++) {
+        for (int j = 0; j < center_offset; j++) printf(" ");
+        printf("||\n");
+        delay_ms(speed * 2); // Animasi tiang turun ke bawah
+    }
+
+    // --- DUDUKAN TIANG ---
+    for (int j = 0; j < center_offset - 3; j++) printf(" ");
+    printf("========\n"); // Alas tiang
 
     printf("\n");
     printCentered(CYAN_TEKS "MERDEKA!" RESET);
