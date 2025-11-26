@@ -7,15 +7,15 @@
 
 
 
-// Jika menggunakan sistem non-Windows, sertakan unistd.h untuk usleep
+
 #ifndef _WIN32
 #include <unistd.h>
-// Untuk Windows, gunakan windows.h dan Sleep
+
 #else
 #include <windows.h>
 #endif
 
-// --- KODE WARNA ANSI ---
+// --- KODE WARNA ANSI NYA TEMAN" ---
 #define RESET "\x1b[0m"
 #define MERAH_TEKS "\x1b[31m"
 #define HIJAU_TEKS "\x1b[32m"
@@ -30,7 +30,7 @@
 #define BIRU_BG "\x1b[44m"
 #define HITAM_TEKS "\x1b[30m"
 
-// --- STRUKTUR DATA ---
+// --- INI STRUKTUR DATA NYA YHH---
 
 struct Obat {
     int id;
@@ -64,7 +64,7 @@ int jumlahObat = 0;
 struct Transaksi riwayatTransaksi[100];
 int jumlahTransaksi = 0;
 
-// --- FUNGSI UTILITAS (Bantuan & Perbaikan Input) ---
+// ---FUNGSI UTILITAS  (Bantuan & Perbaikan Input) ---
 
 void clearScreen() {
 #ifdef _WIN32
@@ -80,7 +80,7 @@ void flush_input() {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
-// ⭐ FUNGSI UTAMA UNTUK RATA TENGAH HEADER
+//INI UNTUK RATA TENGAHKAN YH GUYS
 void printCentered(const char *text) {
     int terminal_width = 80; 
     int text_length = strlen(text);
