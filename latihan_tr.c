@@ -6,8 +6,6 @@
 #include <stdarg.h>
 
 
-
-
 #ifndef _WIN32
 #include <unistd.h>
 
@@ -80,7 +78,7 @@ void flush_input() {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
-//INI UNTUK RATA TENGAHKAN YH GUYS
+//
 void printCentered(const char *text) {
     int terminal_width = 80; 
     int text_length = strlen(text);
