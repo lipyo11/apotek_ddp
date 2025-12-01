@@ -5,15 +5,15 @@
 #include <time.h>
 #include <stdarg.h>
 
-
+// Jika menggunakan sistem non-Windows, sertakan unistd.h untuk usleep
 #ifndef _WIN32
 #include <unistd.h>
-
+// Untuk Windows, gunakan windows.h dan Sleep
 #else
 #include <windows.h>
 #endif
 
-// --- KODE WARNA ANSI NYA TEMAN" ---
+// --- KODE WARNA ANSI ---
 #define RESET "\x1b[0m"
 #define MERAH_TEKS "\x1b[31m"
 #define HIJAU_TEKS "\x1b[32m"
@@ -28,7 +28,7 @@
 #define BIRU_BG "\x1b[44m"
 #define HITAM_TEKS "\x1b[30m"
 
-// --- INI STRUKTUR DATA NYA YHH---
+// --- STRUKTUR DATA ---
 
 struct Obat {
     int id;
@@ -62,7 +62,7 @@ int jumlahObat = 0;
 struct Transaksi riwayatTransaksi[100];
 int jumlahTransaksi = 0;
 
-// ---FUNGSI UTILITAS  (Bantuan & Perbaikan Input) ---
+// --- FUNGSI UTILITAS (Bantuan & Perbaikan Input) ---
 
 void clearScreen() {
 #ifdef _WIN32
@@ -78,7 +78,7 @@ void flush_input() {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
-//
+// ⭐ FUNGSI UTAMA UNTUK RATA TENGAH HEADER
 void printCentered(const char *text) {
     int terminal_width = 80; 
     int text_length = strlen(text);
@@ -435,6 +435,26 @@ void benderaNegara() {
     printf("\n\n");
     pause();
 }
+
+// AUTHOR
+void Author() {
+	clearScreen();
+	printf(MAGENTA_TEKS"================ AUTHOR APOTIK ================\n");
+	printf(MAGENTA_TEKS"|| AUTHOR:                                 ||\n");
+	printf(MAGENTA_TEKS"|| REGIM ARRUANBANGA (672025192)           ||\n");
+	printf(MAGENTA_TEKS"|| AZARYA ARNANDA (672025202)              ||\n");
+	printf(MAGENTA_TEKS"|| OLIVIA KAMASE PALAMBA' (672025186)      ||\n");
+	printf(MAGENTA_TEKS"|| JUNIARTI ARONGGEAR (672025193)          ||\n");
+	printf(MAGENTA_TEKS"|| KELAS: ASDOS DDP(D)                     ||\n");
+	printf(MAGENTA_TEKS"|| SEMESTER: 1                             ||\n");
+	printf(MAGENTA_TEKS"|| ANGKATAN: 2025                          ||\n");
+	printf(MAGENTA_TEKS"===============================================");
+	
+    printf("\n");
+    printf("\n\n");
+    pause();
+}
+
 // --- FUNGSI INTI APOTIK: CRUD OBAT ---
 
 void lihatListObat() {
@@ -884,7 +904,7 @@ void returnProduk() {
 
         riwayatTransaksi[indexTrx].sudahDiretur = 1;
 
-        printLeftPadded(HIJAU_TEKS "✅ Sukses! Retur diproses.\n" RESET);
+        printLeftPadded(HIJAU_TEKS "Sukses! Retur diproses.\n" RESET);
         printLeftPadded("Stok " KUNING_TEKS "%s" RESET " dikembalikan. Harap berikan refund " MERAH_TEKS "Rp %d" RESET " ke customer.\n",
                daftarObat[indexObatMaster].nama, totalRefund);
     } else {
@@ -963,7 +983,7 @@ void menuManajemenObat() {
         printLeftPadded("5. " KUNING_TEKS "Kembali\n" RESET);
         
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printLeftPadded("Pilihan Anda: ");
+        printLeftPadded(HIJAU_TEKS"Pilihan Anda: ");
 
         if (scanf("%d", &pilihan) != 1) { pilihan = 0; }
         flush_input(); 
@@ -995,7 +1015,7 @@ void menuApotik() {
         printLeftPadded("5. " KUNING_TEKS "Logout (Kembali ke Menu Utama)\n" RESET);
         
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printLeftPadded("Pilihan Anda: ");
+        printLeftPadded(HIJAU_TEKS"Pilihan Anda: ");
 
         if (scanf("%d", &pilihan) != 1) { pilihan = 0; }
         flush_input(); 
@@ -1011,7 +1031,7 @@ void menuApotik() {
     }
 }
 
-// FUNGSI UTAMA (MAIN)
+// F// FUNGSI UTAMA (MAIN)
 int main() {
     initData();
     int pilihan = 0;
@@ -1021,7 +1041,8 @@ int main() {
     }
 
     // --- MENU UTAMA SETELAH LOGIN SUKSES ---
-    while (pilihan != 4) {
+    // FIXED: dari (pilihan != 4) menjadi (pilihan != 5)
+    while (pilihan != 5) {
         clearScreen();
         printCentered(BIRU_TEKS "=========================================" RESET);
         printCentered(CYAN_TEKS "MENU PROGRAM UTAMA" RESET);
@@ -1030,10 +1051,11 @@ int main() {
         printLeftPadded("1. Sistem Apotik\n");
         printLeftPadded("2. Rumah Pola\n");
         printLeftPadded("3. Bendera Negara\n");
-        printLeftPadded("4. " MERAH_TEKS "Exit\n" RESET);
+        printLeftPadded("4. Author\n");
+        printLeftPadded("5. " MERAH_TEKS "Exit\n" RESET);
 
         printCentered(BIRU_TEKS "=========================================" RESET);
-        printLeftPadded("Pilihan Anda: ");
+        printLeftPadded(HIJAU_TEKS"Pilihan Anda: ");
 
         if (scanf("%d", &pilihan) != 1) {
             pilihan = 0;
@@ -1045,21 +1067,31 @@ int main() {
                 loading("Masuk ke Sistem Apotik");
                 menuApotik();
                 break;
+
             case 2:
                 loading("Masuk ke Rumah Pola");
                 rumahPola();
                 break;
+
             case 3:
                 loading("Masuk ke Bendera Negara");
                 benderaNegara();
                 break;
-            case 4:
+
+            case 4: 
+                // Ini tidak lagi membuat program keluar dari menu utama
+                loading("Masuk ke Author");
+                Author();
+                break;
+
+            case 5:
                 if (konfirmasi("Apakah Anda yakin ingin keluar dari program?")) {
                     printLeftPadded(MERAH_TEKS "Program diakhiri.\n" RESET);
                 } else {
-                    pilihan = 0;
+                    pilihan = 0; // kembali lagi ke menu
                 }
                 break;
+
             default:
                 printLeftPadded(MERAH_TEKS "Pilihan tidak valid.\n" RESET);
                 pause();
